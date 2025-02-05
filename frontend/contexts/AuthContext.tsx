@@ -1,12 +1,16 @@
 import { createContext, useState, useEffect, ReactNode } from "react";
 import { createWalletClient, http, WalletClient } from "viem";
-import { privateKeyToAccount } from "viem/accounts";
+import {
+  privateKeyToAccount,
+  SignAuthorizationReturnType,
+} from "viem/accounts";
 import { anvil } from "viem/chains";
 import {
   getWalletsFromDB,
   saveWalletToDB,
   StoredWallet,
 } from "../utils/indexedDB";
+import { eip7702Actions } from "viem/experimental";
 
 export type WalletData = {
   id: string;
@@ -24,6 +28,11 @@ interface AuthContextType {
   selectedWallet: WalletData | null;
   importPrivateKey: () => void;
   handleToggleWalletSelection: (id: string) => void;
+  handleSignAuthorization: (
+    contractAddress: `0x${string}`,
+    sponsor?: `0x${string}`
+  ) => Promise<void>;
+  authorization: SignAuthorizationReturnType | null;
 }
 
 export const AuthContext = createContext<AuthContextType | undefined>(
@@ -35,7 +44,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [accountName, setAccountName] = useState("");
   const [wallets, setWallets] = useState<WalletData[]>([]);
   const [selectedWallet, setSelectedWallet] = useState<WalletData | null>(null);
-
+  const [authorization, setAuthorization] =
+    useState<SignAuthorizationReturnType | null>(null);
   // AuthContext가 마운트될 때 IndexedDB로부터 기존 지갑을 불러와 walletClient를 재생성
   useEffect(() => {
     getWalletsFromDB().then((storedWallets: StoredWallet[]) => {
@@ -108,6 +118,28 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
+  const handleSignAuthorization = async (
+    contractAddress: `0x${string}`,
+    sponsor?: `0x${string}`
+  ) => {
+    if (!selectedWallet) {
+      return;
+    }
+
+    const walletClient = selectedWallet.walletClient.extend(eip7702Actions());
+    if (!walletClient.account) {
+      return;
+    }
+
+    const authorization = await walletClient.signAuthorization({
+      account: walletClient.account,
+      contractAddress,
+      sponsor,
+    });
+
+    setAuthorization(authorization);
+  };
+
   return (
     <AuthContext.Provider
       value={{
@@ -119,6 +151,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         selectedWallet,
         importPrivateKey,
         handleToggleWalletSelection,
+        handleSignAuthorization,
+        authorization,
       }}
     >
       {children}

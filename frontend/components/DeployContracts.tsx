@@ -1,12 +1,61 @@
 "use client";
 
-import React from "react";
+import React, { useMemo } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { useContracts } from "@/hooks/useContracts";
+import { useQueries } from "@tanstack/react-query";
+import { MyERC20Abi } from "@/lib/MyERC20";
+import { formatUnits } from "viem";
 
 const DeployContracts = () => {
   const { selectedWallet } = useAuth();
-  const { deployedContracts, deployContracts, clearContracts } = useContracts();
+  const {
+    deployedContracts,
+    deployContracts,
+    clearContracts,
+    tokenDecimals,
+    publicClient,
+  } = useContracts();
+
+  const { SimpleSwap, USDC, USDK } = useMemo(() => {
+    return {
+      SimpleSwap: deployedContracts["SimpleSwap"],
+      USDC: deployedContracts["USDC"],
+      USDK: deployedContracts["USDK"],
+    };
+  }, [deployedContracts]);
+
+  const queries = useQueries({
+    queries: [
+      {
+        queryKey: ["getUSDCBalance", SimpleSwap],
+        queryFn: () =>
+          publicClient.readContract({
+            address: USDC,
+            abi: MyERC20Abi,
+            functionName: "balanceOf",
+            args: [SimpleSwap],
+          }),
+        refetchInterval: 3000,
+        enabled: !!SimpleSwap && !!USDC,
+      },
+      {
+        queryKey: ["getUSDKBalance", SimpleSwap],
+        queryFn: () =>
+          publicClient.readContract({
+            address: USDK,
+            abi: MyERC20Abi,
+            functionName: "balanceOf",
+            args: [SimpleSwap],
+          }),
+        refetchInterval: 3000,
+        enabled: !!SimpleSwap && !!USDK,
+      },
+    ],
+  });
+
+  const { data: usdcBalance } = queries[0];
+  const { data: usdkBalance } = queries[1];
 
   const handleCopyAddress = async (address: string) => {
     try {
@@ -18,7 +67,7 @@ const DeployContracts = () => {
   };
 
   return (
-    <div className="w-full max-w-md p-4 bg-white rounded border border-black text-black mt-4">
+    <div className="w-full max-w-md p-4 bg-white rounded border border-black text-black">
       <h2 className="text-xl font-semibold mb-2">Deploy Contracts</h2>
       <button
         onClick={deployContracts}
@@ -44,6 +93,16 @@ const DeployContracts = () => {
               </div>
             );
           })}
+          <div className="mt-4 text-black">
+            <p>
+              SimpleSwap USDC Balance:{" "}
+              {formatUnits(usdcBalance ?? BigInt(0), tokenDecimals)} USDC
+            </p>
+            <p>
+              SimpleSwap USDK Balance:{" "}
+              {formatUnits(usdkBalance ?? BigInt(0), tokenDecimals)} USDK
+            </p>
+          </div>
           <button
             onClick={clearContracts}
             className="mt-4 w-full bg-red-500 text-white p-2 rounded border border-red-500 hover:bg-white hover:text-red-500"

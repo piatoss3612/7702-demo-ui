@@ -2,7 +2,13 @@
 
 import React, { createContext, useState, useEffect } from "react";
 import { useAuth } from "../hooks/useAuth";
-import { createPublicClient, getCreateAddress, http, parseUnits } from "viem";
+import {
+  createPublicClient,
+  getCreateAddress,
+  http,
+  parseUnits,
+  PublicClient,
+} from "viem";
 import { anvil } from "viem/chains";
 
 // 컨트랙트 관련 ABI 및 바이트코드
@@ -28,12 +34,13 @@ const DECIMALS = 6;
 const INITIAL_SUPPLY = parseUnits("1000000", DECIMALS);
 
 export interface ContractsContextType {
-  deployedContracts: Record<string, string>;
+  deployedContracts: Record<string, `0x${string}`>;
   tokenDecimals: number;
   tokenInitialSupply: bigint;
   deployContracts: () => Promise<void>;
   clearContracts: () => Promise<void>;
   reloadContracts: () => Promise<void>;
+  publicClient: PublicClient;
 }
 
 export const ContractsContext = createContext<ContractsContextType | undefined>(
@@ -47,7 +54,7 @@ export const ContractsProvider = ({
 }) => {
   const { selectedWallet } = useAuth();
   const [deployedContracts, setDeployedContracts] = useState<
-    Record<string, string>
+    Record<string, `0x${string}`>
   >({});
   const publicClient = createPublicClient({
     chain: anvil,
@@ -235,6 +242,7 @@ export const ContractsProvider = ({
         deployContracts,
         clearContracts,
         reloadContracts,
+        publicClient,
       }}
     >
       {children}

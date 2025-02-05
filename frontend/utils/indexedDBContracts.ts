@@ -5,11 +5,11 @@ const STORE_NAME = "contracts";
 
 export interface StoredContracts {
   id: string;
-  SimpleDelegate?: string;
-  SafeSimpleDelegate?: string;
-  USDC?: string;
-  USDK?: string;
-  SimpleSwap?: string;
+  SimpleDelegate?: `0x${string}`;
+  SafeSimpleDelegate?: `0x${string}`;
+  USDC?: `0x${string}`;
+  USDK?: `0x${string}`;
+  SimpleSwap?: `0x${string}`;
 }
 
 export async function getContractsFromDB(): Promise<StoredContracts | null> {

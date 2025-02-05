@@ -1,16 +1,13 @@
 "use client";
 
-import { useQuery } from "@tanstack/react-query";
-import { createPublicClient, formatEther, http } from "viem";
-import { anvil } from "viem/chains";
+import { useQueries, useQuery } from "@tanstack/react-query";
+import { formatEther, formatUnits } from "viem";
 import { useAuth } from "../hooks/useAuth";
+import { useContracts } from "@/hooks/useContracts";
+import { MyERC20Abi } from "@/lib/MyERC20";
+import { useMemo } from "react";
 
 export default function WalletManager() {
-  const publicClient = createPublicClient({
-    chain: anvil,
-    transport: http(),
-  });
-
   const {
     accountName,
     setAccountName,
@@ -21,6 +18,14 @@ export default function WalletManager() {
     importPrivateKey,
     handleToggleWalletSelection,
   } = useAuth();
+  const { deployedContracts, tokenDecimals, publicClient } = useContracts();
+
+  const { USDC, USDK } = useMemo(() => {
+    return {
+      USDC: deployedContracts["USDC"],
+      USDK: deployedContracts["USDK"],
+    };
+  }, [deployedContracts]);
 
   const { data: ethBalance } = useQuery({
     queryKey: ["getEthBalance", selectedWallet?.walletClient.account?.address],
@@ -28,9 +33,47 @@ export default function WalletManager() {
       publicClient.getBalance({
         address: selectedWallet?.walletClient.account?.address ?? "0x",
       }),
-    refetchInterval: 5000, // 5초마다 잔액 갱신
+    refetchInterval: 3000, // 3초마다 잔액 갱신
     enabled: !!selectedWallet,
   });
+
+  const queries = useQueries({
+    queries: [
+      {
+        queryKey: [
+          "getUSDCBalance",
+          selectedWallet?.walletClient.account?.address,
+        ],
+        queryFn: () =>
+          publicClient.readContract({
+            address: USDC as `0x${string}`,
+            abi: MyERC20Abi,
+            functionName: "balanceOf",
+            args: [selectedWallet?.walletClient.account?.address ?? "0x"],
+          }),
+        refetchInterval: 3000,
+        enabled: !!selectedWallet && !!USDC,
+      },
+      {
+        queryKey: [
+          "getUSDKBalance",
+          selectedWallet?.walletClient.account?.address,
+        ],
+        queryFn: () =>
+          publicClient.readContract({
+            address: USDK as `0x${string}`,
+            abi: MyERC20Abi,
+            functionName: "balanceOf",
+            args: [selectedWallet?.walletClient.account?.address ?? "0x"],
+          }),
+        refetchInterval: 3000,
+        enabled: !!selectedWallet && !!USDK,
+      },
+    ],
+  });
+
+  const { data: usdcBalance } = queries[0];
+  const { data: usdkBalance } = queries[1];
 
   const address = selectedWallet?.walletClient.account?.address;
   const shortenedAddress = address
@@ -144,6 +187,14 @@ export default function WalletManager() {
             <p>
               <strong>ETH Balance: </strong>
               {formatEther(ethBalance ?? BigInt(0))} ETH
+            </p>
+            <p>
+              <strong>USDC Balance: </strong>
+              {formatUnits(usdcBalance ?? BigInt(0), tokenDecimals)} USDC
+            </p>
+            <p>
+              <strong>USDK Balance: </strong>
+              {formatUnits(usdkBalance ?? BigInt(0), tokenDecimals)} USDK
             </p>
           </div>
         ) : (
