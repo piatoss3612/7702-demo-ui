@@ -6,7 +6,7 @@ import { SimpleDelegateAbi } from "@/lib/SimpleDelegate";
 import { SimpleSwapAbi } from "@/lib/SimpleSwap";
 import { useQuery } from "@tanstack/react-query";
 import React, { useState } from "react";
-import { Log, parseEventLogs } from "viem";
+import { Log, parseEventLogs, TransactionReceipt } from "viem";
 import { anvil } from "viem/chains";
 import { eip7702Actions } from "viem/experimental";
 
@@ -96,11 +96,13 @@ const Execute = () => {
   ]);
 
   const [hash, setHash] = useState<`0x${string}` | null>(null);
+
   // authorization이 존재하면 기본값을 true로 설정합니다.
   const [useAuthorization, setUseAuthorization] = useState<boolean>(
     !!authorization
   );
 
+  const [receipt, setReceipt] = useState<TransactionReceipt | null>(null);
   const [logs, setLogs] = useState<Log[]>([]);
 
   const handleToggleTargetWalletSelection = (id: string) => {
@@ -214,6 +216,7 @@ const Execute = () => {
       setHash(txHash);
       clearAuthorization();
       setUseAuthorization(false);
+      setReceipt(receipt);
     } catch (err) {
       console.error("Error executing contract:", err);
     }
@@ -317,7 +320,19 @@ const Execute = () => {
           <p className="break-all">Transaction Hash: {hash}</p>
         </div>
       )}
-
+      {receipt && (
+        <div className="mt-4">
+          <p className="break-all">Transaction Receipt: </p>
+          <pre className="p-2 border rounded bg-gray-100 whitespace-pre-wrap break-words">
+            {JSON.stringify(
+              receipt,
+              (_key, value) =>
+                typeof value === "bigint" ? value.toString() : value,
+              2
+            )}
+          </pre>
+        </div>
+      )}
       {logs.length > 0 && (
         <div className="mt-4">
           <h3 className="text-xl font-bold mb-4">Event Logs</h3>
