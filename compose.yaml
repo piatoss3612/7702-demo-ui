@@ -1,13 +1,14 @@
 services:
-  anvil:
-    image: ghcr.io/foundry-rs/foundry
-    container_name: anvil
-    environment:
-      ANVIL_IP_ADDR: "0.0.0.0"
-    working_dir: /anvil
-    ports:
-      - "8545:8545"
-    command: anvil --hardfork prague
+  # Hardfork not working on docker
+  # anvil:
+  #   image: ghcr.io/foundry-rs/foundry
+  #   container_name: anvil
+  #   environment:
+  #     ANVIL_IP_ADDR: "0.0.0.0"
+  #   working_dir: /anvil
+  #   ports:
+  #     - "8545:8545"
+  #   command: ["anvil", "--hardfork", "prague"]
   server:
     container_name: eip7702-demo-frontend
     build:

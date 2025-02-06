@@ -9,18 +9,18 @@ import Execute from "@/components/Execute";
 export default function Home() {
   return (
     <div className="min-h-screen flex items-center justify-center bg-white px-4">
-      <div className="flex flex-col md:flex-row p-4 gap-6">
-        <div className="w-full md:w-96">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 p-4 gap-6">
+        <div>
           <WalletManager />
         </div>
-        <div className="w-full md:w-96">
+        <div>
           <DeployContracts />
           <SignData />
         </div>
-        <div className="w-full md:w-96">
+        <div>
           <EncodeData />
         </div>
-        <div className="w-full md:w-96">
+        <div>
           <Execute />
         </div>
       </div>
