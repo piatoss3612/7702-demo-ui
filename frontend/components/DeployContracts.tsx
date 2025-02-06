@@ -1,5 +1,3 @@
-"use client";
-
 import React, { useMemo } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { useContracts } from "@/hooks/useContracts";
@@ -51,12 +49,31 @@ const DeployContracts = () => {
         refetchInterval: 3000,
         enabled: !!SimpleSwap && !!USDK,
       },
+      {
+        queryKey: [
+          "getUSDCAllowance",
+          SimpleSwap,
+          selectedWallet?.walletClient?.account?.address,
+        ],
+        queryFn: () =>
+          publicClient.readContract({
+            address: USDC,
+            abi: MyERC20Abi,
+            functionName: "allowance",
+            args: [
+              selectedWallet?.walletClient?.account?.address ?? "0x",
+              SimpleSwap,
+            ],
+          }),
+        refetchInterval: 3000,
+        enabled: !!SimpleSwap && !!USDC && !!selectedWallet,
+      },
     ],
   });
 
   const { data: usdcBalance } = queries[0];
   const { data: usdkBalance } = queries[1];
-
+  const { data: usdcAllowance } = queries[2];
   const handleCopyAddress = async (address: string) => {
     try {
       await navigator.clipboard.writeText(address);
@@ -101,6 +118,10 @@ const DeployContracts = () => {
             <p>
               SimpleSwap USDK Balance:{" "}
               {formatUnits(usdkBalance ?? BigInt(0), tokenDecimals)} USDK
+            </p>
+            <p>
+              USDC Allowance by selected wallet:{" "}
+              {formatUnits(usdcAllowance ?? BigInt(0), tokenDecimals)} USDC
             </p>
           </div>
           <button

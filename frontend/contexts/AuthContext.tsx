@@ -33,6 +33,7 @@ interface AuthContextType {
     sponsor?: `0x${string}`
   ) => Promise<void>;
   authorization: SignAuthorizationReturnType | null;
+  clearAuthorization: () => void;
 }
 
 export const AuthContext = createContext<AuthContextType | undefined>(
@@ -140,6 +141,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     setAuthorization(authorization);
   };
 
+  const clearAuthorization = () => {
+    setAuthorization(null);
+  };
+
   return (
     <AuthContext.Provider
       value={{
@@ -153,6 +158,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         handleToggleWalletSelection,
         handleSignAuthorization,
         authorization,
+        clearAuthorization,
       }}
     >
       {children}

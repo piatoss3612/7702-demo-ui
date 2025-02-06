@@ -3,6 +3,8 @@
 import WalletManager from "@/components/WalletManager";
 import SignData from "@/components/SignAuthorization";
 import DeployContracts from "@/components/DeployContracts";
+import EncodeData from "@/components/EncodeData";
+import Execute from "@/components/Execute";
 
 export default function Home() {
   return (
@@ -15,7 +17,12 @@ export default function Home() {
           <DeployContracts />
           <SignData />
         </div>
-        <div className="w-full md:w-96"></div>
+        <div className="w-full md:w-96">
+          <EncodeData />
+        </div>
+        <div className="w-full md:w-96">
+          <Execute />
+        </div>
       </div>
     </div>
   );

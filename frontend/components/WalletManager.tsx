@@ -1,5 +1,3 @@
-"use client";
-
 import { useQueries, useQuery } from "@tanstack/react-query";
 import { formatEther, formatUnits } from "viem";
 import { useAuth } from "../hooks/useAuth";

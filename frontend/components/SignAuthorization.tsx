@@ -1,16 +1,20 @@
-"use client";
-
 import React, { useState } from "react";
 import { useAuth } from "../hooks/useAuth";
+import { useContracts } from "@/hooks/useContracts";
 
 const SignAuthorization = () => {
   const { authorization, handleSignAuthorization } = useAuth();
-  const [implementation, setImplementation] = useState<`0x${string}`>("0x");
+  const { selectedDelegate, setSelectedDelegate, delegateOptions } =
+    useContracts();
   const [sponsor, setSponsor] = useState<`0x${string}`>("0x");
 
   const handleSign = async () => {
+    if (!selectedDelegate) {
+      return;
+    }
+
     await handleSignAuthorization(
-      implementation,
+      selectedDelegate,
       sponsor === "0x" ? undefined : sponsor
     );
   };
@@ -19,17 +23,21 @@ const SignAuthorization = () => {
     <div className="w-full max-w-md p-4 bg-white rounded border border-black text-black mt-4">
       <h2 className="text-xl font-semibold mb-2">Sign Authorization</h2>
       <div className="mb-4">
-        <label htmlFor="implementation" className="block text-black mb-2">
-          Implementation
+        <label htmlFor="delegateContract" className="block text-black mb-2">
+          Delegate Contract
         </label>
-        <input
-          id="implementation"
-          type="text"
-          placeholder="Enter implementation address"
-          value={implementation}
-          onChange={(e) => setImplementation(e.target.value as `0x${string}`)}
+        <select
+          id="delegateContract"
+          value={selectedDelegate}
+          onChange={(e) => setSelectedDelegate(e.target.value as `0x${string}`)}
           className="w-full border border-black p-2 rounded focus:outline-none text-black"
-        />
+        >
+          {delegateOptions.map((option) => (
+            <option key={option.name} value={option.address}>
+              {option.name}: {option.address}
+            </option>
+          ))}
+        </select>
       </div>
       <div className="mb-4">
         <label htmlFor="sponsor" className="block text-black mb-2">

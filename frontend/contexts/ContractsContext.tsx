@@ -1,6 +1,6 @@
 "use client";
 
-import React, { createContext, useState, useEffect } from "react";
+import React, { createContext, useState, useEffect, useMemo } from "react";
 import { useAuth } from "../hooks/useAuth";
 import {
   createPublicClient,
@@ -41,6 +41,9 @@ export interface ContractsContextType {
   clearContracts: () => Promise<void>;
   reloadContracts: () => Promise<void>;
   publicClient: PublicClient;
+  selectedDelegate: `0x${string}` | "";
+  setSelectedDelegate: (delegate: `0x${string}` | "") => void;
+  delegateOptions: { name: string; address: `0x${string}` }[];
 }
 
 export const ContractsContext = createContext<ContractsContextType | undefined>(
@@ -60,6 +63,25 @@ export const ContractsProvider = ({
     chain: anvil,
     transport: http(),
   });
+
+  const [selectedDelegate, setSelectedDelegate] = useState<`0x${string}` | "">(
+    ""
+  );
+
+  const delegateOptions = useMemo(() => {
+    return Object.entries(deployedContracts)
+      .filter(
+        ([key]) => key === "SimpleDelegate" || key === "SafeSimpleDelegate"
+      )
+      .map(([name, address]) => ({ name, address }));
+  }, [deployedContracts]);
+
+  // delegateOptions가 변경될 때, selectedDelegate가 아직 설정되지 않았다면 첫 번째 delegateOptions의 address를 기본값으로 지정합니다.
+  useEffect(() => {
+    if (selectedDelegate === "" && delegateOptions.length > 0) {
+      setSelectedDelegate(delegateOptions[0].address);
+    }
+  }, [delegateOptions, selectedDelegate]);
 
   // DB에서 저장된 컨트랙트 주소 불러오기
   const reloadContracts = async () => {
@@ -243,6 +265,9 @@ export const ContractsProvider = ({
         clearContracts,
         reloadContracts,
         publicClient,
+        selectedDelegate,
+        setSelectedDelegate,
+        delegateOptions,
       }}
     >
       {children}
