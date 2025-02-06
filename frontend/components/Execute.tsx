@@ -165,7 +165,7 @@ const Execute = () => {
         ],
         chain: anvil,
         authorizationList:
-          authorization && useAuthorization ? [authorization] : [],
+          authorization && useAuthorization ? [authorization] : undefined,
       });
 
       const receipt = await publicClient.waitForTransactionReceipt({
