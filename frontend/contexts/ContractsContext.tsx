@@ -2,13 +2,7 @@
 
 import React, { createContext, useState, useEffect, useMemo } from "react";
 import { useAuth } from "../hooks/useAuth";
-import {
-  createPublicClient,
-  getCreateAddress,
-  http,
-  parseUnits,
-  PublicClient,
-} from "viem";
+import { createPublicClient, http, parseUnits, PublicClient } from "viem";
 import { anvil } from "viem/chains";
 
 // 컨트랙트 관련 ABI 및 바이트코드
@@ -17,10 +11,6 @@ import {
   SimpleDelegateAbi,
   SimpleDelegateBytecode,
 } from "@/lib/SimpleDelegate";
-import {
-  SafeSimpleDelegateAbi,
-  SafeSimpleDelegateBytecode,
-} from "@/lib/SafeSimpleDelegate";
 import { SimpleSwapAbi, SimpleSwapBytecode } from "@/lib/SimpleSwap";
 
 // IndexedDB 관련 유틸리티
@@ -28,6 +18,7 @@ import {
   getContractsFromDB,
   saveContractsToDB,
   deleteContractsFromDB,
+  StoredContracts,
 } from "@/utils/indexedDBContracts";
 
 const DECIMALS = 6;
@@ -70,10 +61,14 @@ export const ContractsProvider = ({
 
   const delegateOptions = useMemo(() => {
     return Object.entries(deployedContracts)
-      .filter(
-        ([key]) => key === "SimpleDelegate" || key === "SafeSimpleDelegate"
-      )
-      .map(([name, address]) => ({ name, address }));
+      .filter(([key]) => key === "SimpleDelegate")
+      .map(([name, address]) => ({ name, address }))
+      .concat([
+        {
+          name: "Remove",
+          address: "0x0000000000000000000000000000000000000000",
+        },
+      ]);
   }, [deployedContracts]);
 
   // delegateOptions가 변경될 때, selectedDelegate가 아직 설정되지 않았다면 첫 번째 delegateOptions의 address를 기본값으로 지정합니다.
@@ -110,16 +105,6 @@ export const ContractsProvider = ({
       return;
     }
     try {
-      const simpleDelegate = getCreateAddress({
-        from: walletClient.account.address,
-        nonce: BigInt(
-          await publicClient.getTransactionCount({
-            address: walletClient.account.address,
-          })
-        ),
-      });
-      console.log("SimpleDelegate address:", simpleDelegate);
-
       const txHash1 = await walletClient.deployContract({
         abi: SimpleDelegateAbi,
         account: walletClient.account,
@@ -128,33 +113,12 @@ export const ContractsProvider = ({
       });
       console.log("SimpleDelegate deployed:", txHash1);
 
-      const safeSimpleDelegate = getCreateAddress({
-        from: walletClient.account.address,
-        nonce: BigInt(
-          await publicClient.getTransactionCount({
-            address: walletClient.account.address,
-          })
-        ),
+      const receipt1 = await publicClient.waitForTransactionReceipt({
+        hash: txHash1,
       });
-      console.log("SafeSimpleDelegate address:", safeSimpleDelegate);
+      console.log("SimpleDelegate address:", receipt1.contractAddress);
 
-      const txHash2 = await walletClient.deployContract({
-        abi: SafeSimpleDelegateAbi,
-        account: walletClient.account,
-        bytecode: SafeSimpleDelegateBytecode,
-        chain: anvil,
-      });
-      console.log("SafeSimpleDelegate deployed:", txHash2);
-
-      const USDC = getCreateAddress({
-        from: walletClient.account.address,
-        nonce: BigInt(
-          await publicClient.getTransactionCount({
-            address: walletClient.account.address,
-          })
-        ),
-      });
-      console.log("USDC address:", USDC);
+      const simpleDelegate = receipt1.contractAddress;
 
       const txHash3 = await walletClient.deployContract({
         abi: MyERC20Abi,
@@ -165,15 +129,12 @@ export const ContractsProvider = ({
       });
       console.log("USDC deployed:", txHash3);
 
-      const USDK = getCreateAddress({
-        from: walletClient.account.address,
-        nonce: BigInt(
-          await publicClient.getTransactionCount({
-            address: walletClient.account.address,
-          })
-        ),
+      const receipt3 = await publicClient.waitForTransactionReceipt({
+        hash: txHash3,
       });
-      console.log("USDK address:", USDK);
+      console.log("USDC address:", receipt3.contractAddress);
+
+      const USDC = receipt3.contractAddress;
 
       const txHash4 = await walletClient.deployContract({
         abi: MyERC20Abi,
@@ -184,14 +145,13 @@ export const ContractsProvider = ({
       });
       console.log("USDK deployed:", txHash4);
 
-      const simpleSwap = getCreateAddress({
-        from: walletClient.account.address,
-        nonce: BigInt(
-          await publicClient.getTransactionCount({
-            address: walletClient.account.address,
-          })
-        ),
+      const receipt4 = await publicClient.waitForTransactionReceipt({
+        hash: txHash4,
       });
+      console.log("USDK address:", receipt4.contractAddress);
+
+      const USDK = receipt4.contractAddress;
+
       const txHash5 = await walletClient.deployContract({
         abi: SimpleSwapAbi,
         account: walletClient.account,
@@ -200,46 +160,52 @@ export const ContractsProvider = ({
       });
       console.log("SimpleSwap deployed:", txHash5);
 
+      const receipt5 = await publicClient.waitForTransactionReceipt({
+        hash: txHash5,
+      });
+      console.log("SimpleSwap address:", receipt5.contractAddress);
+
+      const simpleSwap = receipt5.contractAddress;
+
       const createPairResult = await walletClient.writeContract({
-        address: simpleSwap,
+        address: simpleSwap!,
         account: walletClient.account,
         abi: SimpleSwapAbi,
         functionName: "createPair",
-        args: [USDC, USDK],
+        args: [USDC!, USDK!],
         chain: anvil,
       });
       console.log("Pair created:", createPairResult);
 
       const approveResult = await walletClient.writeContract({
-        address: USDK,
+        address: USDK!,
         account: walletClient.account,
         abi: MyERC20Abi,
         functionName: "approve",
-        args: [simpleSwap, INITIAL_SUPPLY],
+        args: [simpleSwap!, INITIAL_SUPPLY],
         chain: anvil,
       });
       console.log("Approved:", approveResult);
 
       const addLiquidityResult = await walletClient.writeContract({
-        address: simpleSwap,
+        address: simpleSwap!,
         account: walletClient.account,
         abi: SimpleSwapAbi,
         functionName: "depositLiquidity",
-        args: [USDK, INITIAL_SUPPLY],
+        args: [USDK!, INITIAL_SUPPLY],
         chain: anvil,
       });
       console.log("Liquidity added:", addLiquidityResult);
 
       const deployed = {
         SimpleDelegate: simpleDelegate,
-        SafeSimpleDelegate: safeSimpleDelegate,
         USDC: USDC,
         USDK: USDK,
         SimpleSwap: simpleSwap,
       };
 
-      setDeployedContracts(deployed);
-      await saveContractsToDB(deployed);
+      setDeployedContracts(deployed as Record<string, `0x${string}`>);
+      await saveContractsToDB(deployed as Omit<StoredContracts, "id">);
     } catch (error) {
       console.error("Deployment failed:", error);
     }

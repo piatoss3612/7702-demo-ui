@@ -1,4 +1,4 @@
-import { useQueries, useQuery } from "@tanstack/react-query";
+import { useQueries } from "@tanstack/react-query";
 import { formatEther, formatUnits } from "viem";
 import { useAuth } from "../hooks/useAuth";
 import { useContracts } from "@/hooks/useContracts";
@@ -25,18 +25,20 @@ export default function WalletManager() {
     };
   }, [deployedContracts]);
 
-  const { data: ethBalance } = useQuery({
-    queryKey: ["getEthBalance", selectedWallet?.walletClient.account?.address],
-    queryFn: () =>
-      publicClient.getBalance({
-        address: selectedWallet?.walletClient.account?.address ?? "0x",
-      }),
-    refetchInterval: 3000, // 3초마다 잔액 갱신
-    enabled: !!selectedWallet,
-  });
-
   const queries = useQueries({
     queries: [
+      {
+        queryKey: [
+          "getEthBalance",
+          selectedWallet?.walletClient.account?.address,
+        ],
+        queryFn: () =>
+          publicClient.getBalance({
+            address: selectedWallet?.walletClient.account?.address ?? "0x",
+          }),
+        refetchInterval: 3000, // 3초마다 잔액 갱신
+        enabled: !!selectedWallet,
+      },
       {
         queryKey: [
           "getUSDCBalance",
@@ -70,8 +72,9 @@ export default function WalletManager() {
     ],
   });
 
-  const { data: usdcBalance } = queries[0];
-  const { data: usdkBalance } = queries[1];
+  const { data: ethBalance } = queries[0];
+  const { data: usdcBalance } = queries[1];
+  const { data: usdkBalance } = queries[2];
 
   const address = selectedWallet?.walletClient.account?.address;
   const shortenedAddress = address

@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React from "react";
 import { useAuth } from "../hooks/useAuth";
 import { useContracts } from "@/hooks/useContracts";
 
@@ -6,21 +6,17 @@ const SignAuthorization = () => {
   const { authorization, handleSignAuthorization } = useAuth();
   const { selectedDelegate, setSelectedDelegate, delegateOptions } =
     useContracts();
-  const [sponsor, setSponsor] = useState<`0x${string}`>("0x");
 
   const handleSign = async () => {
     if (!selectedDelegate) {
       return;
     }
 
-    await handleSignAuthorization(
-      selectedDelegate,
-      sponsor === "0x" ? undefined : sponsor
-    );
+    await handleSignAuthorization(selectedDelegate);
   };
 
   return (
-    <div className="w-full max-w-md p-4 bg-white rounded border border-black text-black mt-4">
+    <div className="w-full max-w-md p-4 bg-white rounded border border-black text-black">
       <h2 className="text-xl font-semibold mb-2">Sign Authorization</h2>
       <div className="mb-4">
         <label htmlFor="delegateContract" className="block text-black mb-2">
@@ -39,19 +35,7 @@ const SignAuthorization = () => {
           ))}
         </select>
       </div>
-      <div className="mb-4">
-        <label htmlFor="sponsor" className="block text-black mb-2">
-          Sponsor (Optional)
-        </label>
-        <input
-          id="sponsor"
-          type="text"
-          placeholder="Enter sponsor address"
-          value={sponsor}
-          onChange={(e) => setSponsor(e.target.value as `0x${string}`)}
-          className="w-full border border-black p-2 rounded focus:outline-none text-black"
-        />
-      </div>
+
       <button
         onClick={handleSign}
         className="w-full bg-black text-white p-2 rounded border border-black hover:bg-white hover:text-black"

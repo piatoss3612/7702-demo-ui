@@ -4,11 +4,20 @@
 
 - Node.js 20.x
 - Docker
+- Foundry
 
 ## Setup
 
+- Run frontend
+
 ```bash
-make up
+$ make up
+```
+
+- Run anvil
+
+```bash
+$ anvil --hardfork prague
 ```
 
 ## Access
@@ -18,5 +27,5 @@ make up
 ## Stop
 
 ```bash
-make down
+$ make down
 ```

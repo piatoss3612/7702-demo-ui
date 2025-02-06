@@ -30,7 +30,8 @@ interface AuthContextType {
   handleToggleWalletSelection: (id: string) => void;
   handleSignAuthorization: (
     contractAddress: `0x${string}`,
-    sponsor?: `0x${string}`
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    sponsor?: any
   ) => Promise<void>;
   authorization: SignAuthorizationReturnType | null;
   clearAuthorization: () => void;

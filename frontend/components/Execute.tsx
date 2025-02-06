@@ -2,9 +2,9 @@
 import { useAuth } from "@/hooks/useAuth";
 import { useContracts } from "@/hooks/useContracts";
 import { MyERC20Abi } from "@/lib/MyERC20";
-import { SafeSimpleDelegateAbi } from "@/lib/SafeSimpleDelegate";
 import { SimpleDelegateAbi } from "@/lib/SimpleDelegate";
 import { SimpleSwapAbi } from "@/lib/SimpleSwap";
+import { useQuery } from "@tanstack/react-query";
 import React, { useState } from "react";
 import { Log, parseEventLogs } from "viem";
 import { anvil } from "viem/chains";
@@ -69,12 +69,27 @@ const CallInput: React.FC<CallInputProps> = ({
 
 const Execute = () => {
   const { wallets, authorization, clearAuthorization } = useAuth();
-  const { selectedDelegate, delegateOptions, publicClient } = useContracts();
+  const { publicClient } = useContracts();
 
   // 기존에 WalletData 객체 자체를 보관하는 대신, 지갑의 id만 저장합니다.
   const [targetWalletId, setTargetWalletId] = useState<string | null>(null);
   // AuthContext의 지갑 목록에서 id를 기반으로 타겟 지갑을 도출합니다.
   const targetWallet = wallets.find((w) => w.id === targetWalletId) || null;
+
+  const { data: code } = useQuery({
+    queryKey: ["getCode", targetWallet?.walletClient.account?.address],
+    queryFn: async () => {
+      const code = await publicClient.getCode({
+        address: targetWallet?.walletClient.account?.address ?? "0x",
+      });
+      if (!code) {
+        return null;
+      }
+      return code;
+    },
+    refetchInterval: 3000,
+    enabled: !!targetWallet,
+  });
 
   const [calls, setCalls] = useState<Call[]>([
     { data: "0x", to: "0x", value: BigInt(0) },
@@ -177,15 +192,8 @@ const Execute = () => {
         logs: receipt.logs,
       });
 
-      const delegateContractName = delegateOptions.find(
-        (option) => option.address === selectedDelegate
-      )?.name;
-
       const simpleDelegateLogs = parseEventLogs({
-        abi:
-          delegateContractName === "SimpleDelegate"
-            ? SimpleDelegateAbi
-            : SafeSimpleDelegateAbi,
+        abi: SimpleDelegateAbi,
         logs: receipt.logs,
       });
 
@@ -250,6 +258,16 @@ const Execute = () => {
           </div>
         ) : (
           <p className="text-black mb-6">No wallets registered.</p>
+        )}
+        {targetWallet && code && (
+          <div className="p-4 bg-white rounded border border-black text-black">
+            <p>
+              <strong>Target Wallet Code: </strong>
+              <pre className="p-2 border rounded bg-gray-100 whitespace-pre-wrap break-words">
+                {code}
+              </pre>
+            </p>
+          </div>
         )}
       </div>
 
