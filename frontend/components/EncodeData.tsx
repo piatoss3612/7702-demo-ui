@@ -32,6 +32,12 @@ const FunctionInput: React.FC<FunctionInputProps> = ({
   );
 };
 
+interface CalldataHistoryEntry {
+  calldata: string;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  functionAbi: any; // 필요 시 적절한 타입으로 수정 가능
+}
+
 const EncodeData = () => {
   // Define the function ABI fragments
   const functionAbis = [
@@ -75,36 +81,37 @@ const EncodeData = () => {
   const [inputValues, setInputValues] = useState<string[]>(
     functionAbis[0].inputs.map(() => "")
   );
-  // State to show the resulting encoded calldata
-  const [encodedCalldata, setEncodedCalldata] = useState("");
+  // Encoded calldata 이력을 누적하기 위한 상태
+  const [calldataHistory, setCalldataHistory] = useState<
+    CalldataHistoryEntry[]
+  >([]);
 
-  // Get the function details of the currently selected function
+  // 현재 선택된 함수의 ABI 정보
   const selectedFunction = functionAbis[selectedFunctionIndex];
 
-  // Handle changing the selected function via the select component
+  // Select 컴포넌트를 통해 선택된 함수를 변경할 때의 핸들러
   const handleFunctionChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     const index = Number(e.target.value);
     setSelectedFunctionIndex(index);
     const newFunction = functionAbis[index];
-    // Reset input values and clear encoded calldata
+    // 새 함수에 맞춰 입력값을 리셋
     setInputValues(newFunction.inputs.map(() => ""));
-    setEncodedCalldata("");
   };
 
-  // Handle changing any of the input fields
+  // 각 입력 필드 값을 업데이트하는 핸들러
   const handleInputChange = (index: number, value: string) => {
     const newInputs = [...inputValues];
     newInputs[index] = value;
     setInputValues(newInputs);
   };
 
-  // When the user clicks to encode, convert the inputs as needed and call the viem encoding method.
+  // 인코딩 버튼 클릭 시, 입력값 처리 후 viem의 encodeFunctionData 메서드 호출
   const handleEncode = () => {
     try {
-      // Process the function arguments based on the function ABI
+      // 함수 ABI에 맞춰 args 값을 변환
       const args = selectedFunction.inputs.map((input, index) => {
         const value = inputValues[index];
-        // For uint types, convert the value to BigInt
+        // uint 타입이면 BigInt로 변환
         if (input.type.startsWith("uint")) {
           try {
             return BigInt(value);
@@ -115,23 +122,32 @@ const EncodeData = () => {
             );
           }
         }
-        // For addresses and any other types, use the raw string value
+        // 그 외의 타입은 문자열 그대로 사용
         return value;
       });
 
-      // Encode the calldata using viem's encodeFunctionData by passing in the ABI fragment
+      // viem의 encodeFunctionData를 사용하여 calldata 인코딩
       const calldata = encodeFunctionData({
         abi: [selectedFunction],
         functionName: selectedFunction.name,
         args: args,
       });
-      setEncodedCalldata(calldata);
+
+      // 새로운 calldata를 history에 추가
+      setCalldataHistory((prev) => [
+        ...prev,
+        { calldata, functionAbi: selectedFunction },
+      ]);
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (error: any) {
       console.error(error);
       alert("Error encoding calldata: " + error.message);
-      setEncodedCalldata("");
     }
+  };
+
+  // calldata history를 초기화하는 핸들러
+  const clearHistory = () => {
+    setCalldataHistory([]);
   };
 
   return (
@@ -154,7 +170,7 @@ const EncodeData = () => {
         </select>
       </div>
 
-      {/* Render dynamic input components based on selected function inputs */}
+      {/* 동적으로 입력 필드를 렌더링 */}
       {selectedFunction.inputs.map((input, index) => (
         <FunctionInput
           key={index}
@@ -164,7 +180,7 @@ const EncodeData = () => {
         />
       ))}
 
-      {/* Button to trigger calldata encoding */}
+      {/* Calldata 인코딩 버튼 */}
       <button
         className="w-full bg-black text-white p-2 rounded border border-black hover:bg-white hover:text-black"
         onClick={handleEncode}
@@ -172,31 +188,47 @@ const EncodeData = () => {
         Encode Calldata
       </button>
 
-      {/* Display the encoded calldata if available */}
-      {encodedCalldata && (
-        <>
-          <div className="mt-4 p-2 border rounded bg-gray-100">
-            <h3 className="font-medium">Encoded Calldata:</h3>
-            <pre className="whitespace-pre-wrap break-words">
-              {encodedCalldata}
-            </pre>
+      {/* Encoded Calldata 이력 표시 영역 */}
+      {calldataHistory.length > 0 && (
+        <div className="mt-4">
+          <div className="flex justify-between items-center mb-2">
+            <h3 className="font-medium">Encoded Calldata History:</h3>
+            <button
+              className="bg-red-500 text-white p-1 rounded hover:bg-red-400"
+              onClick={clearHistory}
+            >
+              Clear History
+            </button>
           </div>
-          <div className="mt-4 p-2 border rounded bg-gray-100">
-            <h3 className="font-medium">Decoded Calldata:</h3>
-            <pre className="whitespace-pre-wrap break-words">
-              {JSON.stringify(
-                decodeFunctionData({
-                  abi: [selectedFunction],
-                  data: encodedCalldata as `0x${string}`,
-                }),
-                // Replacer function to convert BigInt to string
-                (_key, value) =>
-                  typeof value === "bigint" ? value.toString() : value,
-                2
-              )}
-            </pre>
-          </div>
-        </>
+
+          {calldataHistory.map((entry, index) => (
+            <div key={index} className="mt-4 p-2 border rounded bg-gray-100">
+              <h4 className="font-medium">
+                Entry #{index + 1} - {entry.functionAbi.name}
+              </h4>
+              <div>
+                <strong>Encoded Calldata:</strong>
+                <pre className="whitespace-pre-wrap break-words">
+                  {entry.calldata}
+                </pre>
+              </div>
+              <div>
+                <strong>Decoded Calldata:</strong>
+                <pre className="whitespace-pre-wrap break-words">
+                  {JSON.stringify(
+                    decodeFunctionData({
+                      abi: [entry.functionAbi],
+                      data: entry.calldata as `0x${string}`,
+                    }),
+                    (_key, value) =>
+                      typeof value === "bigint" ? value.toString() : value,
+                    2
+                  )}
+                </pre>
+              </div>
+            </div>
+          ))}
+        </div>
       )}
     </div>
   );

@@ -68,13 +68,13 @@ const CallInput: React.FC<CallInputProps> = ({
 };
 
 const Execute = () => {
-  const { selectedWallet, authorization, clearAuthorization } = useAuth();
-  const {
-    selectedDelegate,
-    setSelectedDelegate,
-    delegateOptions,
-    publicClient,
-  } = useContracts();
+  const { wallets, authorization, clearAuthorization } = useAuth();
+  const { selectedDelegate, delegateOptions, publicClient } = useContracts();
+
+  // 기존에 WalletData 객체 자체를 보관하는 대신, 지갑의 id만 저장합니다.
+  const [targetWalletId, setTargetWalletId] = useState<string | null>(null);
+  // AuthContext의 지갑 목록에서 id를 기반으로 타겟 지갑을 도출합니다.
+  const targetWallet = wallets.find((w) => w.id === targetWalletId) || null;
 
   const [calls, setCalls] = useState<Call[]>([
     { data: "0x", to: "0x", value: BigInt(0) },
@@ -87,6 +87,19 @@ const Execute = () => {
   );
 
   const [logs, setLogs] = useState<Log[]>([]);
+
+  const handleToggleTargetWalletSelection = (id: string) => {
+    // 현재 선택한 타겟 지갑의 ID와 같다면 해제 (단, 두 개 이상 있을 때)
+    if (targetWalletId === id) {
+      if (wallets.length > 1) {
+        console.log("Clearing target wallet selection");
+        setTargetWalletId(null);
+      }
+    } else {
+      console.log("Setting new target wallet:", id);
+      setTargetWalletId(id);
+    }
+  };
 
   const handleCallChange = (
     index: number,
@@ -119,21 +132,27 @@ const Execute = () => {
   };
 
   const handleExecute = async () => {
-    if (!selectedWallet || !selectedDelegate) {
-      console.error("Wallet or delegate contract not selected");
+    if (!targetWallet) {
+      console.error("Wallet not selected");
       return;
     }
 
-    const walletClient = selectedWallet.walletClient.extend(eip7702Actions());
+    const walletClient = targetWallet.walletClient.extend(eip7702Actions());
     if (!walletClient.account) {
       console.error("No account found in wallet");
+      return;
+    }
+
+    const targetWalletClient = targetWallet.walletClient;
+    if (!targetWalletClient.account) {
+      console.error("No account found in target wallet");
       return;
     }
 
     try {
       // authorization 사용 여부에 따라 해당 데이터를 전달합니다.
       const txHash = await walletClient.writeContract({
-        address: selectedDelegate,
+        address: targetWalletClient.account.address,
         account: walletClient.account,
         abi: SimpleDelegateAbi,
         functionName: "execute",
@@ -186,7 +205,6 @@ const Execute = () => {
       setLogs(knownLogs);
       setHash(txHash);
       clearAuthorization();
-      setCalls([{ data: "0x", to: "0x", value: BigInt(0) }]);
       setUseAuthorization(false);
     } catch (err) {
       console.error("Error executing contract:", err);
@@ -198,19 +216,41 @@ const Execute = () => {
       <h2 className="text-xl font-semibold mb-2">Execute Delegate Calls</h2>
 
       <div className="mb-4">
-        <label className="block mb-1 font-medium">Delegate Contract</label>
-        <select
-          id="delegateContract"
-          value={selectedDelegate}
-          onChange={(e) => setSelectedDelegate(e.target.value as `0x${string}`)}
-          className="w-full border border-black p-2 rounded focus:outline-none text-black"
-        >
-          {delegateOptions.map((option) => (
-            <option key={option.name} value={option.address}>
-              {option.name}: {option.address}
-            </option>
-          ))}
-        </select>
+        <h2 className="text-xl font-semibold text-black mb-4">
+          Select Target Wallet
+        </h2>
+        {wallets.length > 0 ? (
+          <div className="mb-6">
+            {wallets.map((wallet) => (
+              <div
+                key={wallet.id}
+                className={`flex items-center mb-2 p-2 rounded border transition-colors duration-200 ${
+                  targetWallet?.id === wallet.id
+                    ? "border-blue-500 bg-blue-100"
+                    : "border-gray-300 hover:border-blue-400"
+                }`}
+              >
+                <input
+                  type="checkbox"
+                  id={`target-wallet-${wallet.id}`}
+                  checked={targetWalletId === wallet.id}
+                  onChange={() => handleToggleTargetWalletSelection(wallet.id)}
+                  className="mr-2"
+                />
+                <label
+                  htmlFor={`target-wallet-${wallet.id}`}
+                  className="text-black"
+                >
+                  {wallet.accountName} -{" "}
+                  {wallet.walletClient?.account?.address.slice(0, 6)}...
+                  {wallet.walletClient?.account?.address.slice(-4)}
+                </label>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <p className="text-black mb-6">No wallets registered.</p>
+        )}
       </div>
 
       {/* authorization 데이터가 있을 경우 사용 여부를 결정하는 체크박스 */}
@@ -274,6 +314,10 @@ const Execute = () => {
                 </h4>
                 <span className="text-sm text-gray-500">Log #{index + 1}</span>
               </div>
+              <h5 className="text-sm text-gray-500">
+                target:{" "}
+                {`${log.address.slice(0, 6)}...${log.address.slice(-4)}`}
+              </h5>
               <div className="bg-gray-100 p-3 rounded overflow-x-auto">
                 <pre className="whitespace-pre-wrap text-sm text-gray-600 font-mono">
                   {JSON.stringify(
