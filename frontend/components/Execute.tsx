@@ -303,33 +303,37 @@ const Execute = () => {
       {logs.length > 0 && (
         <div className="mt-4">
           <h3 className="text-xl font-bold mb-4">Event Logs</h3>
-          {logs.map((log, index) => (
-            <div
-              key={index}
-              className="p-4 bg-gray-50 border border-gray-200 rounded shadow"
-            >
-              <div className="flex justify-between items-center mb-2">
-                <h4 className="text-lg font-semibold text-gray-800">
-                  {(log as any).eventName}
-                </h4>
-                <span className="text-sm text-gray-500">Log #{index + 1}</span>
+          <div className="flex flex-col gap-2">
+            {logs.map((log, index) => (
+              <div
+                key={index}
+                className="p-4 bg-gray-50 border border-gray-200 rounded shadow"
+              >
+                <div className="flex justify-between items-center mb-2">
+                  <h4 className="text-lg font-semibold text-gray-800">
+                    {(log as any).eventName}
+                  </h4>
+                  <span className="text-sm text-gray-500">
+                    Log #{index + 1}
+                  </span>
+                </div>
+                <h5 className="text-sm text-gray-500">
+                  target:{" "}
+                  {`${log.address.slice(0, 6)}...${log.address.slice(-4)}`}
+                </h5>
+                <div className="bg-gray-100 p-3 rounded overflow-x-auto">
+                  <pre className="whitespace-pre-wrap text-sm text-gray-600 font-mono">
+                    {JSON.stringify(
+                      (log as any).args,
+                      (_key, value) =>
+                        typeof value === "bigint" ? value.toString() : value,
+                      2
+                    )}
+                  </pre>
+                </div>
               </div>
-              <h5 className="text-sm text-gray-500">
-                target:{" "}
-                {`${log.address.slice(0, 6)}...${log.address.slice(-4)}`}
-              </h5>
-              <div className="bg-gray-100 p-3 rounded overflow-x-auto">
-                <pre className="whitespace-pre-wrap text-sm text-gray-600 font-mono">
-                  {JSON.stringify(
-                    (log as any).args,
-                    (_key, value) =>
-                      typeof value === "bigint" ? value.toString() : value,
-                    2
-                  )}
-                </pre>
-              </div>
-            </div>
-          ))}
+            ))}
+          </div>
         </div>
       )}
     </div>
