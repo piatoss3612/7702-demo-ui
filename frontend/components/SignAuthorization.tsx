@@ -1,18 +1,38 @@
-import React from "react";
+import React, { useState } from "react";
 import { useAuth } from "../hooks/useAuth";
 import { useContracts } from "@/hooks/useContracts";
 
 const SignAuthorization = () => {
-  const { authorization, handleSignAuthorization } = useAuth();
+  const { authorization, handleSignAuthorization, wallets } = useAuth();
   const { selectedDelegate, setSelectedDelegate, delegateOptions } =
     useContracts();
+
+  // 기존에 WalletData 객체 자체를 보관하는 대신, 지갑의 id만 저장합니다.
+  const [targetWalletId, setTargetWalletId] = useState<string | null>(null);
+  // AuthContext의 지갑 목록에서 id를 기반으로 타겟 지갑을 도출합니다.
+  const targetWallet = wallets.find((w) => w.id === targetWalletId) || null;
 
   const handleSign = async () => {
     if (!selectedDelegate) {
       return;
     }
 
-    await handleSignAuthorization(selectedDelegate);
+    const targetWalletAccount = targetWallet?.walletClient.account;
+
+    await handleSignAuthorization(selectedDelegate, targetWalletAccount);
+  };
+
+  const handleToggleTargetWalletSelection = (id: string) => {
+    // 현재 선택한 타겟 지갑의 ID와 같다면 해제 (단, 두 개 이상 있을 때)
+    if (targetWalletId === id) {
+      if (wallets.length > 1) {
+        console.log("Clearing target wallet selection");
+        setTargetWalletId(null);
+      }
+    } else {
+      console.log("Setting new target wallet:", id);
+      setTargetWalletId(id);
+    }
   };
 
   return (
@@ -34,6 +54,44 @@ const SignAuthorization = () => {
             </option>
           ))}
         </select>
+      </div>
+
+      <div className="mb-4">
+        <h2 className="text-xl font-semibold text-black mb-4">
+          Select Sponsor (Optional)
+        </h2>
+        {wallets.length > 0 ? (
+          <div className="mb-6">
+            {wallets.map((wallet) => (
+              <div
+                key={wallet.id}
+                className={`flex items-center mb-2 p-2 rounded border transition-colors duration-200 ${
+                  targetWallet?.id === wallet.id
+                    ? "border-blue-500 bg-blue-100"
+                    : "border-gray-300 hover:border-blue-400"
+                }`}
+              >
+                <input
+                  type="checkbox"
+                  id={`target-wallet-${wallet.id}`}
+                  checked={targetWalletId === wallet.id}
+                  onChange={() => handleToggleTargetWalletSelection(wallet.id)}
+                  className="mr-2"
+                />
+                <label
+                  htmlFor={`target-wallet-${wallet.id}`}
+                  className="text-black"
+                >
+                  {wallet.accountName} -{" "}
+                  {wallet.walletClient?.account?.address.slice(0, 6)}...
+                  {wallet.walletClient?.account?.address.slice(-4)}
+                </label>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <p className="text-black mb-6">No wallets registered.</p>
+        )}
       </div>
 
       <button

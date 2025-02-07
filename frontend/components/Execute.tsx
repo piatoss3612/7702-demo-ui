@@ -68,7 +68,8 @@ const CallInput: React.FC<CallInputProps> = ({
 };
 
 const Execute = () => {
-  const { wallets, authorization, clearAuthorization } = useAuth();
+  const { wallets, selectedWallet, authorization, clearAuthorization } =
+    useAuth();
   const { publicClient } = useContracts();
 
   // 기존에 WalletData 객체 자체를 보관하는 대신, 지갑의 id만 저장합니다.
@@ -149,12 +150,17 @@ const Execute = () => {
   };
 
   const handleExecute = async () => {
-    if (!targetWallet) {
+    if (!selectedWallet) {
       console.error("Wallet not selected");
       return;
     }
 
-    const walletClient = targetWallet.walletClient.extend(eip7702Actions());
+    if (!targetWallet) {
+      console.error("Target wallet not selected");
+      return;
+    }
+
+    const walletClient = selectedWallet.walletClient.extend(eip7702Actions());
     if (!walletClient.account) {
       console.error("No account found in wallet");
       return;

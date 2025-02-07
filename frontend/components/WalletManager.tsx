@@ -28,6 +28,15 @@ export default function WalletManager() {
   const queries = useQueries({
     queries: [
       {
+        queryKey: ["getNonce", selectedWallet?.walletClient.account?.address],
+        queryFn: () =>
+          publicClient.getTransactionCount({
+            address: selectedWallet?.walletClient.account?.address ?? "0x",
+          }),
+        refetchInterval: 3000,
+        enabled: !!selectedWallet,
+      },
+      {
         queryKey: [
           "getEthBalance",
           selectedWallet?.walletClient.account?.address,
@@ -72,9 +81,10 @@ export default function WalletManager() {
     ],
   });
 
-  const { data: ethBalance } = queries[0];
-  const { data: usdcBalance } = queries[1];
-  const { data: usdkBalance } = queries[2];
+  const { data: nonce } = queries[0];
+  const { data: ethBalance } = queries[1];
+  const { data: usdcBalance } = queries[2];
+  const { data: usdkBalance } = queries[3];
 
   const address = selectedWallet?.walletClient.account?.address;
   const shortenedAddress = address
@@ -184,6 +194,10 @@ export default function WalletManager() {
               ) : (
                 "N/A"
               )}
+            </p>
+            <p>
+              <strong>Nonce: </strong>
+              {nonce}
             </p>
             <p>
               <strong>ETH Balance: </strong>
